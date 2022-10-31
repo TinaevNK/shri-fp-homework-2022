@@ -6,7 +6,6 @@ import {
   equals,
   all,
   countBy,
-  startsWith,
   lte,
   apply,
   values,
@@ -17,6 +16,7 @@ import {
   not,
   propSatisfies,
   props,
+  count,
 } from "ramda";
 
 /**
@@ -54,20 +54,14 @@ export const validateFieldN1 = allPass([
 ]);
 
 // 2. Как минимум две фигуры зеленые.
-export const validateFieldN2 = compose(
-  lte(2),
-  prop(true),
-  countBy(isGreen),
-  values
-);
+export const validateFieldN2 = compose(lte(2), count(isGreen), values);
 
 // 3. Количество красных фигур равно кол-ву синих.
-export const validateFieldN3 = (props) => {
-  const propsArr = Object.values(props);
-  const red = countBy(startsWith("r"))(propsArr);
-  const blue = countBy(startsWith("b"))(propsArr);
-  return red.false === blue.false;
-};
+export const validateFieldN3 = (props) =>
+  equals(
+    compose(count(isBlue), values)(props),
+    compose(count(isRed), values)(props)
+  );
 
 // 4. Синий круг, красная звезда, оранжевый квадрат треугольник любого цвета
 export const validateFieldN4 = allPass([
@@ -83,7 +77,7 @@ export const validateFieldN5 = compose(
   values,
   omit(["white"]),
   countBy(trim),
-  values
+  values,
 );
 
 // 6. Ровно две зеленые фигуры (одна из зелёных – это треугольник), плюс одна красная. Четвёртая оставшаяся любого доступного цвета, но не нарушающая первые два условия
@@ -96,10 +90,8 @@ const greens2AndRed1 = compose(
 export const validateFieldN6 = allPass([isTriangleGreen, greens2AndRed1]);
 
 // 7. Все фигуры оранжевые.
-export const validateFieldN7 = (props) => {
-  const propsArr = Object.values(props);
-  return all(isOrange)(propsArr);
-};
+export const validateFieldN7 = compose(all(isOrange), values);
+
 // 8. Не красная и не белая звезда, остальные – любого цвета.
 export const validateFieldN8 = allPass([
   complement(propEq("star", "white")),
@@ -107,10 +99,7 @@ export const validateFieldN8 = allPass([
 ]);
 
 // 9. Все фигуры зеленые.
-export const validateFieldN9 = (props) => {
-  const propsArr = Object.values(props);
-  return all(isGreen)(propsArr);
-};
+export const validateFieldN9 = compose(all(isGreen), values);
 
 // 10. Треугольник и квадрат одного цвета (не белого), остальные – любого цвета
 export const validateFieldN10 = allPass([
