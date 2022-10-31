@@ -1,51 +1,78 @@
-/**
- * @file Домашка по FP ч. 2
- *
- * Подсказки:
- * Метод get у инстанса Api – каррированый
- * GET / https://animals.tech/{id}
- *
- * GET / https://api.tech/numbers/base
- * params:
- * – number [Int] – число
- * – from [Int] – из какой системы счисления
- * – to [Int] – в какую систему счисления
- *
- * Иногда промисы от API будут приходить в состояние rejected, (прямо как и API в реальной жизни)
- * Ответ будет приходить в поле {result}
- */
- import Api from '../tools/api';
+import {
+  allPass,
+  compose,
+  gt,
+  match,
+  not,
+  prop,
+  when,
+  lt,
+  tap,
+  partialRight,
+  otherwise,
+  andThen,
+  tryCatch,
+} from "ramda";
+import Api from "../tools/api";
 
- const api = new Api();
+const api = new Api();
 
- /**
-  * Я – пример, удали меня
-  */
- const wait = time => new Promise(resolve => {
-     setTimeout(resolve, time);
- })
+const getLength = prop("length");
+const getMessage = prop("message");
+const getResult = prop("result");
 
- const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
-     /**
-      * Я – пример, удали меня
-      */
-     writeLog(value);
+const parseValueToInt = compose(Math.round, parseFloat);
 
-     api.get('https://api.tech/numbers/base', {from: 2, to: 10, number: '01011010101'}).then(({result}) => {
-         writeLog(result);
-     });
+const isValid = allPass([
+  compose(lt(2), getLength),
+  compose(gt(10), getLength),
+  match(/^[0-9]*\.?[0-9]*$/g),
+  compose(lt(0), parseValueToInt),
+]);
 
-     wait(2500).then(() => {
-         writeLog('SecondLog')
+const pow = partialRight(Math.pow, [2]);
+const divideByThree = (x) => x % 3;
 
-         return wait(1500);
-     }).then(() => {
-         writeLog('ThirdLog');
+const throwValidationError = () => {
+  throw new Error("ValidationError");
+};
 
-         return wait(400);
-     }).then(() => {
-         handleSuccess('Done');
-     });
- }
+const validateValue = when(compose(not, isValid), throwValidationError);
 
- export default processSequence;
+const getAnimal = (value) => api.get(`https://animals.tech/${value}`, {});
+const convertToBinary = (value) =>
+  api.get("https://api.tech/numbers/base", { from: 10, to: 2, number: value });
+
+const processSequence = ({ value, writeLog, handleSuccess, handleError }) => {
+  const handleErrorMessage = compose(handleError, getMessage);
+
+  const processBinaryValue = compose(
+    tap(writeLog),
+    divideByThree,
+    tap(writeLog),
+    pow,
+    tap(writeLog),
+    getLength,
+    tap(writeLog),
+    getResult
+  );
+
+  const handleResultSuccess = compose(handleSuccess, getResult);
+
+  const processValue = compose(
+    otherwise(handleError),
+    andThen(handleResultSuccess),
+    andThen(getAnimal),
+    andThen(processBinaryValue),
+    convertToBinary,
+    tap(writeLog),
+    parseValueToInt,
+    tap(validateValue),
+    tap(writeLog)
+  );
+
+  const processSafe = tryCatch(processValue, handleErrorMessage);
+  processSafe(value);
+};
+
+export default processSequence;
